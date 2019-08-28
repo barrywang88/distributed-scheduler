@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:soa="http://soa-springtag.dapeng.com/schema/service"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://soa-springtag.dapeng.com/schema/service
+        http://soa-springtag.dapeng.com/schema/service/service.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--参数配置-->
+    <context:property-placeholder location="classpath:config_finance-task.properties" local-override="false"
+                                  system-properties-mode="ENVIRONMENT"/>
+
+    <context:component-scan base-package="com.barry.service.*"/>
+
+    <bean id="financeScheduledService" class="com.barry.service.scheduler.ScheduledServiceImpl"/>
+    <soa:service ref="financeScheduledService"/>
+
+    <bean id="slf4j-filter" class="com.alibaba.druid.filter.logging.Slf4jLogFilter">
+        <property name="statementExecutableSqlLogEnable" value="true"/>
+    </bean>
+
+    <bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+        <property name="slowSqlMillis" value="180000"/><!--set the slow sql as 3 min-->
+        <property name="logSlowSql" value="true"/>
+    </bean>
+
+    <bean class="com.barry.service.scheduler.util.AppContextHolder" factory-method="getInstance"/>
+
+    <!--==========================================Finanace task start================================-->
+    <!-- 数据库和事务配置 -->
+    <bean id="financeTaskDataSourceBean" class="com.barry.service.scheduler.datasource.FinanceTaskDataSource"/>
+
+    <bean id="finance_task_dataSource" class="com.barry.service.scheduler.datasource.DapengDataSource" init-method="init"
+          destroy-method="close">ds
+        <!--基本属性 url、user、password配置-->
+        <property name="url" value="${DB_FINANCE_TASK_URL}"/>
+        <property name="username" value="${DB_FINANCE_TASK_USER}"/>
+        <property name="password" value="${DB_FINANCE_TASK_PASSWD}"/>
+
+        <!--配置初始化大小、最小、最大-->
+        <property name="initialSize" value="1"/>
+        <property name="minIdle" value="1"/>
+        <property name="maxActive" value="50"/>
+
+        <!--配置获取连接等待超时的时间-->
+        <property name="maxWait" value="10000"/>
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="300000"/>
+
+        <property name="validationQuery" value="SELECT 'x'"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="testOnReturn" value="true"/>
+
+        <property name="connectionInitSqls" value="set names utf8mb4;"/>
+
+        <property name="proxyFilters">
+            <list>
+                <ref bean="stat-filter"/>
+                <ref bean="slf4j-filter"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 配置spring的PlatformTransactionManager，名字为默认值 -->
+    <bean id="taskTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="finance_task_dataSource"/>
+    </bean>
+
+    <bean id="taskTransactionTemplate" class="org.springframework.transaction.support.TransactionTemplate">
+        <property name="transactionManager" ref="taskTransactionManager"/>
+    </bean>
+    <!--使用事物敏感bean-->
+    <bean id="tx_finance_task_dataSource" class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+        <constructor-arg ref="finance_task_dataSource"/>
+    </bean>
+
+    <!--开启事务控制的注解支持-->
+    <tx:annotation-driven transaction-manager="taskTransactionManager"/>
+    <!--==========================================Finanace task end================================-->
+</beans>

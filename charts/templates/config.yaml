@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task
+  namespace: {{ .Values.namespace }}
+data:
+  #单独的zk通信端口
+  soa_container_port: "{{ .Values.soa_container_port }}"
+  SMTP_HOST: "smtp.today36524.com.cn"
+  SMPT_USER: "sjyuan@today36524.com.cn"
+  SMTP_PASSWORD: "Today36524"
+  SMTP_AUTH: "true"
+  FROM_EMAIL: "sjyuan@today36524.com.cn"
+  E_JAVA_OPTS: " -Dname=financeTaskService -Xms1G -Xmx1G -Xss256K -Dio.netty.leakDetectionLevel=advanced -XX:MetaspaceSize=256M -XX:MaxMetaspaceSize=256M"
+  slow_service_check_enable: "false"
+  soa_service_timeout: "6000000"

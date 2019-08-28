@@ -1,0 +1,22 @@
+aiversion: v1
+kind: Service
+metadata:
+  name: {{ template "task.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ template "task.name" . }}
+    chart: {{ template "task.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.soa_container_port }}
+      targetPort: {{ .Values.soa_container_port }}
+      protocol: TCP
+      name: task
+      nodePort: {{ .Values.nodePort }}
+  selector:
+    app: {{ template "task.name" . }}
+    release: {{ .Release.Name }}
+

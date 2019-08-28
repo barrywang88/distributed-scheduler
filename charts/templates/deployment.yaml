@@ -1,0 +1,80 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "task.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ template "task.name" . }}
+    chart: {{ template "task.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "task.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "task.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+          - name: {{ .Values.volumeMounts.name_log }}
+            mountPath: {{ .Values.volumeMounts.mountPath_logs }}
+          - name: {{ .Values.volumeMounts.name_db }}
+            mountPath: {{ .Values.volumeMounts.mountPath_db }}
+          - name: {{ .Values.volumeMounts.name_shm }}
+            mountPath: {{ .Values.volumeMounts.mountPath_shm }}
+          ports:
+            - name: finance
+              containerPort: {{ .Values.soa_container_port }}
+              protocol: TCP
+          env:
+           - name: host_ip
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: status.hostIP
+          envFrom:
+          - configMapRef:
+              name: {{ template "task.name" . }}
+          - configMapRef:
+              name: common
+      dnsConfig:
+        nameservers:
+        - {{ .Values.dnsip }}
+      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#            - matchExpressions:
+#              - key: kubernetes.io/hostname
+#                operator: In
+#                values:
+#                  - node3
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - {key: app, operator: In, values: ["task"]}
+            topologyKey: kubernetes.io/hostname
+
+      volumes:
+        - name: {{ .Values.volumes.name_log }}
+          nfs:
+              server: {{ .Values.volumes.nfsip }}
+              path: {{ .Values.volumes.nfspath_logs }}
+        - name: {{ .Values.volumes.name_db }}
+          nfs:
+              server: {{ .Values.volumes.nfsip }}
+              path: {{ .Values.volumes.nfspath_db }}
+        - name: {{ .Values.volumes.name_shm }}
+          nfs:
+              server: {{ .Values.volumes.nfsip }}
+              path: {{ .Values.volumes.nfspath_shm }}
