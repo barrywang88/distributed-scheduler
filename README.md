@@ -1,7 +1,8 @@
 # distributed-scheduler
 可配置分布式定时任务
 
-https://www.cnblogs.com/barrywxx/p/10033242.html
+具体介绍请参考：
+https://www.cnblogs.com/barrywxx/p/Quartz.html
 
 关键词：
 
